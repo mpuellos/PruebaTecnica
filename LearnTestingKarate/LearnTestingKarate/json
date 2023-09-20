@@ -1,0 +1,23 @@
+{
+    "item": {
+        "bucketName": "cobre-report-transfers-files-qa",
+        "provider": "PMC",
+        "workPlaceBank": "FJY03",
+        "isActive": true,
+        "typePayment": [{
+                "fileName": "WORKPLACEBANK-IDCORELACION-ECS-TIPOPRODUCTOCOBRE-REGISTROS-MONTO-FECHA_HORA.csv",
+                "codeFile": "ECS_V2",
+                "notifyFinancial": true,
+                "bucketAddress": "/ECS",
+                "fileType": ".csv"
+            },
+            {
+                "fileName": "WORKPLACEBANK-IDCORELACION-TIPOPRODUCTOCOBRE-Acciones_Valores-REGISTROS_LOGS-MONTO_00_COP-Transfer-FECHA_HORA.prn",
+                "codeFile": "ACCIONES_VALORES_V2",
+                "notifyFinancial": true,
+                "bucketAddress": "/AV/V2/FJY03",
+                "fileType": ".prn"
+            }
+        ]
+    }
+}
