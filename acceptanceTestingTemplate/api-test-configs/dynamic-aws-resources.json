@@ -1,0 +1,52 @@
+{
+  "rds": [
+    {
+      "rdsCode": "tenants.datasources.tenant_GMT06.jdbcUrl",
+      "rdsOrigin": "core_cash_in_gmt-qa",
+      "rdsFormat": "core_cash_in_gmt-qa-$currentDate"
+    }
+  ],
+  "dynamo": [],
+  "sns": [],
+  "sqs": [
+    {
+      "queueCode": "core-cash-in.aws.sqs.event.file-queue-name",
+      "queueFormat": "testingCoreCashInEvent-qa-$uuidRandom.fifo",
+      "snsSuscription": null
+    }
+  ],
+  "generic": [
+    {
+      "propertyCode": "aws.sqs.behaviour.subscription.autosubscribe",
+      "propertyFormat": "false"
+    },
+    {
+      "propertyCode": "tenant.flyway.enabled",
+      "propertyFormat": "false"
+    },
+    {
+      "propertyCode": "tenant.liquibase.enabled",
+      "propertyFormat": "false"
+    },
+    {
+      "propertyCode": "cobre.iam.aws.role.arn",
+      "propertyFormat": "arn:aws:iam::891899566293:role/k8s-utils-qa"
+    },
+    {
+      "propertyCode": "spring.cloud.config.uri",
+      "propertyFormat": "http://mocks:8081"
+    },
+    {
+      "propertyCode": "logging.config",
+      "propertyFormat": "http://mocks:8081/configserver/default/feature(_)config-server/env/qa/logback-spring.xml"
+    },
+    {
+      "propertyCode": "spring.banner.location",
+      "propertyFormat": "http://mocks:8081/configserver/default/feature(_)config-server/env/banner.txt"
+    },
+    {
+      "propertyCode": "url.core.cash.in.accounts.base",
+      "propertyFormat": "http://mocks:8081"
+    }
+  ]
+}

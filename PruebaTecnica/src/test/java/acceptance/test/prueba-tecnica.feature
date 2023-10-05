@@ -74,7 +74,7 @@ Feature: sample karate test script
 
     # --------------------------------------------------------------- #
     # Uso de API REST para obtener información de las novelty-details
-    * def dataWithExpectedInformation = karate.read("classpath:dataJson/" + '<jsonDataWithExpectedInformation>')
+    * def dataWithExpectedInformation = karate.read("classpath:acceptance/test/" + '<jsonDataWithExpectedInformation>')
     * def pageInt = parseInt('<page>')
     * def sizeInt = parseInt('<size>')
     Given url 'https://test-container-qa.prueba.co/v1/entity/novelties/'+noveltyUuid+''+'/novelty-details'
@@ -91,7 +91,7 @@ Feature: sample karate test script
       | TEST01     | src/test/java/acceptance/test/ | queueEvent.json   | src/test/java/acceptance/test/ | recaudoTemplateDatosCorrectos.csv | src/test/resources/testFilesToUse/ | src/test/java/acceptance/test/      | respuestaEsperadaDatosCorrectos.json | VALIDATED     | 3             | '0'                   | '3'           | 1    | 3    |
 
   @regression
-  Scenario Outline: Dado que se carga un archivo de recaudo con datos que contienen caracteres especiales, al procesarse el archivo se verificará la información y se persistirpan en BD con el detalle del error
+  Scenario Outline: Dado que se carga un archivo de recaudo con datos que contienen caracteres especiales, al procesarse el archivo se verificará la información y se persistirán en BD con el detalle del error
     # --------------------------------------------------------------- #
     * def bucketName = 'test-automation-qa'
     * def folderRecaudoFiles = 'files-to-cash-in'
@@ -151,7 +151,7 @@ Feature: sample karate test script
 
     # --------------------------------------------------------------- #
     # Uso de API REST para obtener información de las novelty-details
-    * def dataWithExpectedInformation = karate.read("classpath:dataJson/" + '<jsonDataWithExpectedInformation>')
+    * def dataWithExpectedInformation = karate.read("classpath:acceptance/test/" + '<jsonDataWithExpectedInformation>')
     * def pageInt = parseInt('<page>')
     * def sizeInt = parseInt('<size>')
     Given url 'https://test-container-qa.prueba.co/v1/entity/novelties/'+noveltyUuid+''+'/novelty-details'

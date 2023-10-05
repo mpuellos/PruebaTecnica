@@ -1,0 +1,134 @@
+@Library('cobre-jenkins-library') _
+
+slackFirstMessage = null
+DYNAMIC_RESOURCES = [:]
+RESULT_IMAGES = [:]
+pipeline {
+  environment{
+      componentType = 'core|util'
+      myPodNamespace = 'ent1-qa'
+      componentName = 'core-cash-in'
+
+      currentDate = sh(returnStdout: true, script: 'date +%Y-%m-%d_%H-%M-%S').trim().concat('-'+env.BUILD_ID)
+            reportHtml = '/overview-features.html'
+            randomContainerName = org.apache.commons.lang.RandomStringUtils.random(8, true, true)
+            randomPortServer = java.util.concurrent.ThreadLocalRandom.current().nextInt(1000, 65500 + 1)
+            jobFolderNameBuild = getJobFolderName()
+            jobBuildName = getComponentName().toLowerCase()
+            randomContainerNameLower = randomContainerName.toLowerCase()
+
+            JENKINS_USER_CREDENTIALS = credentials('jenkins-user-credentials')
+  }
+        agent { label 'slave-1'}
+
+        stages {
+          stage('Preparation of libraries') {
+            steps {
+              loadQaLibraries()
+            }
+          }
+          stage('Slack started') {
+            steps {
+              script {
+                  def appVersion = getQaAppVersionImage(getQaBaseRegistry(env.componentType), env.componentName)
+                  slackFirstMessage = slackSend(channel: "${slackchannel}",
+                              message : "📣 Started execution #${BUILD_ID} of ${suiteName} with tag ${tag} » testing ${env.componentName} component with version ${appVersion}: (<${BUILD_URL}|View logs>)")
+              }
+            }
+          }
+          stage('Create Dynamic Resources') {
+              steps{
+                  script{
+                      DYNAMIC_RESOURCES = createQaDynamicAWSResources(env.randomContainerName, env.currentDate, './api-test-configs/dynamic-aws-resources.json')
+                  }
+              }
+          }
+          stage('Generate Environment') {
+              steps{
+                  script {
+                    generateEnvQaTests(env.randomContainerName, getQaBaseRegistry(env.componentType), env.componentName, env.currentDate, env.myPodNamespace, env.randomPortServer, DYNAMIC_RESOURCES)
+                  }
+             }
+           }
+          stage('Build and Push Docker Images') {
+              steps{
+                  script {
+                    RESULT_IMAGES = generateQaDockerImages(env.randomContainerName, env.jobBuildName, DYNAMIC_RESOURCES)
+                  }
+              }
+          }
+          stage('Creating K8S Test Containers') {
+            steps {
+              script {
+                  def pathFiles = generateQaTestContainerK8SFiles(env.randomContainerNameLower, RESULT_IMAGES, env.myPodNamespace)
+                  addAppToArgoCD(pathFiles, env.randomContainerNameLower, env.jobBuildName)
+              }
+            }
+          }
+          stage('Wait Up Temporal Server with Component Containers') {
+              steps{
+                  script{
+                      timeout(time: 10, unit: 'MINUTES'){
+                          sh 'chmod +x ./scripts/server_up_validate.sh'
+                          sh "./scripts/server_up_validate.sh https://test-container-${randomContainerNameLower}.qa.cobre.co"
+                      }
+                  }
+              }
+          }
+          stage('Acceptance Test Run') {
+               steps{
+                  script{
+                      withCredentials([
+                          usernamePassword(credentialsId: 'jfrog-deploy-credentials', usernameVariable: 'USER_JFROG', passwordVariable: 'PASS_JFROG'),
+                          usernamePassword(credentialsId: 'database-qa-credentials', usernameVariable: 'DB_USER', passwordVariable: 'DB_PASS')
+                          ])  {
+                          def karateParams = generateKarateParams(env.randomContainerNameLower, DYNAMIC_RESOURCES)
+                          sh """ cp settings.xml /root/.m2/settings.xml
+                          rm -rf /root/.m2/repository/co/cobre/cobre-bom-qa
+                          docker run --rm -v /root/.m2:/root/.m2 -v "\$(pwd)":/app -w /app -e COBRE_REPO_USER=$USER_JFROG -e COBRE_REPO_PASS=$PASS_JFROG -e DB_URL=database.qa.cobre.co -e DB_USER=$DB_USER -e DB_PASSWORD=$DB_PASS --add-host=host.docker.internal:host-gateway maven:3-alpine mvn clean test -Dkarate.options="--tags ${tag}" -Dtest=${runner} ${karateParams}
+                          """
+                      }
+                  }
+             }
+           }
+        }
+        post {
+              always{
+                  script{
+                      deleteDynamicAWSResources(DYNAMIC_RESOURCES)
+                      def buildFolder = "/root/jenkins/workspace/${jobFolderNameBuild}"
+                      def s3Folder = "s3://cobre-utils/qa-automation-reports/${jobFolder}/${reportPrefix}-${currentDate}"
+                      try{
+                        sh "aws s3 cp ${buildFolder}/target/cucumber-html-reports/ ${s3Folder} --recursive --acl public-read --metadata-directive REPLACE"
+                      }catch(e){}
+                      def logsName = "test-container-${env.randomContainerNameLower}-qa-${env.currentDate}-logs.txt"
+                      def logsNameMocks = "test-container-mocks-${env.randomContainerNameLower}-qa-${env.currentDate}-logs.txt"
+                      getLogsOfAppFromArgoCD(env.randomContainerNameLower, logsName, 'test-container')
+                      getLogsOfAppFromArgoCD(env.randomContainerNameLower, logsNameMocks, 'mocks')
+                      try{
+                        sh "aws s3 cp ${buildFolder}/${logsName} ${s3Folder}/test-container-${randomContainerNameLower}-qa-${currentDate}-logs.txt --acl public-read --metadata-directive REPLACE"
+                        sh "aws s3 cp ${buildFolder}/${logsNameMocks} ${s3Folder}/test-container-mocks-${randomContainerNameLower}-qa-${currentDate}-logs.txt --acl public-read --metadata-directive REPLACE"
+                      }catch(e){}
+                      removeAppFromArgoCD(env.randomContainerNameLower)
+                  }
+              }
+
+              failure
+              {
+                slackSend(channel: "${slackchannel}",
+                              color: 'danger',
+                              message: "# Execution Finished #${BUILD_ID}: ${job} with tag ${tag} - :alert::alert: Failed Tests in https://cobre-utils.s3.us-east-2.amazonaws.com/qa-automation-reports/${jobFolder}/${reportPrefix}-${currentDate}${env.reportHtml}")
+              }
+              success
+              {
+                 slackSend(channel: "${slackchannel}",
+                              color: 'good',
+                              message: "# Execution Finished #${BUILD_ID}: ${job} with tag ${tag} - :white_check_mark::mario_luigi_dance: Finished successfully NO Failed Tests in https://cobre-utils.s3.us-east-2.amazonaws.com/qa-automation-reports/${jobFolder}/${reportPrefix}-${currentDate}${env.reportHtml}")
+              }
+              aborted
+              {
+                  addEmoji(slackFirstMessage, 'black_square_for_stop')
+                  responseMessageAbort(slackFirstMessage, env.JENKINS_USER_CREDENTIALS_USR, env.JENKINS_USER_CREDENTIALS_PSW)
+              }
+  }
+}

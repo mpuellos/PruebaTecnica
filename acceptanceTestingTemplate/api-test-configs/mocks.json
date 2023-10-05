@@ -1,0 +1,25 @@
+[
+  {
+    "path": "/v1/entity/accounts",
+    "response": [
+      {
+      "accountNumber": "225dab26-bcf3-11ed-a480-02ea8ff20208",
+      "accountType": "CHECKING",
+      "cobreAccountUUID": "225dab26-bcf3-11ed-a480-02ea8ff20208",
+      "configId": {
+        "countryCode": "COL",
+        "bankId": "COBRE"
+      },
+      "balance": 10000,
+      "currency": "COP",
+      "workplacebank": "GMT06",
+      "transactionalType": "OPERATIONAL",
+      "overdraft": 0,
+      "lastUpdate": "2023-09-01T16:58:24.938971",
+      "state": "ACTIVE",
+      "isDefaultAccount": true,
+      "accountAlias": "COBRE"
+    }
+    ]
+  }
+]
